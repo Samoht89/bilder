@@ -74,8 +74,8 @@ HTML_TEMPLATE = """
     <p id="filename-display"></p>
     <a id="download-link" class="download-link" href="" download>Last ned dette bilde</a>
     <div>
-      <button onclick="nextImage()">⟨ Nyere</button>
       <button onclick="prevImage()">Eldre ⟩</button>
+      <button onclick="nextImage()">⟨ Nyere</button>
     </div>
   </div>
 
