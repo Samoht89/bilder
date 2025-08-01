@@ -84,17 +84,17 @@ HTML_TEMPLATE = """
   </style>
 </head>
 <body>
-  <h1>🖼️ Bildekarusell</h1>
+  <h1>Bildekarusell</h1>
   <div class="carousel-container">
     <img id="carousel-image" src="" alt="Ingen bilder funnet" />
     <p id="filename-display"></p>
     <a id="download-link" class="download-link" href="" download>Last ned bilde</a>
     <div>
-      <button onclick="nextImage()">⟨ Nyere</button>
       <button onclick="prevImage()">Eldre ⟩</button>
+      <button onclick="nextImage()">⟨ Nyere</button>
     </div>
   </div>
-  <a href="/gallery" class="nav-link">📁 Gå til galleri</a>
+  <a href="/gallery" class="nav-link">Gå til galleri</a>
 
   <script>
     let images = {{ images | tojson }};
