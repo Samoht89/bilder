@@ -1,92 +1,110 @@
 from flask import Flask, send_from_directory, render_template_string
 import os
+import re
+from datetime import datetime
 
 app = Flask(__name__)
 
 IMAGE_FOLDER = "/mnt/bygg"
 
-# Enhanced HTML template with a fancier image carousel and filename display
+# Regex to extract timestamp from filename (image_YYYYMMDD_HHMMSS.jpg)
+timestamp_re = re.compile(r'image_(\d{8}_\d{6})')
+
+def get_timestamp(filename):
+    match = timestamp_re.search(filename)
+    if not match:
+        return datetime.min
+    try:
+        return datetime.strptime(match.group(1), "%Y%m%d_%H%M%S")
+    except ValueError:
+        return datetime.min
+
+# HTML Template
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Image Carousel</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; margin: 2em; }
-  .carousel-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-  }
-  img {
-    max-width: 600px;
-    max-height: 400px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  }
-  .filename {
-    font-size: 1.2em;
-    font-weight: bold;
-    width: 200px;
-    text-align: left;
-  }
-  button {
-    margin: 1em;
-    padding: 0.5em 1em;
-    font-size: 1em;
-    cursor: pointer;
-  }
-  a.download-link {
-    display: block;
-    margin-top: 1em;
-    text-decoration: none;
-    color: #007bff;
-    font-weight: bold;
-  }
-  a.download-link:hover {
-    text-decoration: underline;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Fancy Image Carousel</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+      text-align: center;
+      padding: 2em;
+    }
+    .carousel-container {
+      display: inline-block;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      padding: 2em;
+      max-width: 90%;
+    }
+    img {
+      max-width: 100%;
+      max-height: 500px;
+      border-radius: 8px;
+    }
+    button {
+      margin: 1em;
+      padding: 0.6em 1.4em;
+      font-size: 1.1em;
+      border: none;
+      background-color: #3498db;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .download-link, #filename-display {
+      margin-top: 1em;
+      display: block;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h1>Image Carousel</h1>
+  <h1>🖼️ Image Carousel</h1>
   <div class="carousel-container">
     <img id="carousel-image" src="" alt="No images found" />
-    <div class="filename" id="filename-display">No images</div>
+    <p id="filename-display"></p>
+    <a id="download-link" class="download-link" href="" download>Download This Image</a>
+    <div>
+      <button onclick="nextImage()">⟨ Newer</button>
+      <button onclick="prevImage()">Older ⟩</button>
+    </div>
   </div>
-  <button onclick="prevImage()">← Prev</button>
-  <button onclick="nextImage()">Next →</button>
-  <a id="download-link" class="download-link" href="" download>Download This Image</a>
 
   <script>
     let images = {{ images | tojson }};
     let index = 0;
 
     function updateImage() {
-      if(images.length === 0) {
+      if (images.length === 0) {
         document.getElementById('carousel-image').alt = "No images available";
         document.getElementById('carousel-image').src = "";
-        document.getElementById('filename-display').textContent = "No images";
         document.getElementById('download-link').style.display = 'none';
+        document.getElementById('filename-display').textContent = "";
         return;
       }
-      const currentImage = images[index];
-      document.getElementById('carousel-image').src = '/images/' + currentImage;
-      document.getElementById('carousel-image').alt = currentImage;
-      document.getElementById('filename-display').textContent = currentImage;
-      document.getElementById('download-link').href = '/images/' + currentImage;
+      let filename = images[index];
+      document.getElementById('carousel-image').src = '/images/' + filename;
+      document.getElementById('download-link').href = '/images/' + filename;
       document.getElementById('download-link').style.display = 'inline-block';
+      document.getElementById('filename-display').textContent = filename;
     }
 
     function prevImage() {
-      index = (index - 1 + images.length) % images.length;
+      index = (index + 1) % images.length; // older
       updateImage();
     }
 
     function nextImage() {
-      index = (index + 1) % images.length;
+      index = (index - 1 + images.length) % images.length; // newer
       updateImage();
     }
 
@@ -99,9 +117,14 @@ HTML_TEMPLATE = """
 @app.route("/")
 def index():
     try:
-        files = [f for f in os.listdir(IMAGE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))]
-    except Exception:
+        files = [
+            f for f in os.listdir(IMAGE_FOLDER)
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))
+        ]
+        files.sort(key=get_timestamp, reverse=True)
+    except Exception as e:
         files = []
+
     return render_template_string(HTML_TEMPLATE, images=files)
 
 @app.route("/images/<filename>")
