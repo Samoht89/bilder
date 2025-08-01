@@ -1,11 +1,13 @@
-from flask import Flask, send_from_directory, render_template_string, request
+from flask import Flask, send_from_directory, render_template_string
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 
 app = Flask(__name__)
 
 IMAGE_FOLDER = "/mnt/bygg"
+
+# Regex to extract timestamp from filename (image_YYYYMMDD_HHMMSS.jpg)
 timestamp_re = re.compile(r'image_(\d{8}_\d{6})')
 
 def get_timestamp(filename):
@@ -17,12 +19,13 @@ def get_timestamp(filename):
     except ValueError:
         return datetime.min
 
+# HTML Template
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Fancy Image Carousel</title>
+  <title>St. Olav Byggeprosjekt</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -62,15 +65,6 @@ HTML_TEMPLATE = """
       display: block;
       font-weight: bold;
     }
-    .nav-links {
-      margin-top: 2em;
-    }
-    .nav-links a {
-      margin: 0 1em;
-      text-decoration: none;
-      font-weight: bold;
-      color: #3498db;
-    }
   </style>
 </head>
 <body>
@@ -78,17 +72,11 @@ HTML_TEMPLATE = """
   <div class="carousel-container">
     <img id="carousel-image" src="" alt="No images found" />
     <p id="filename-display"></p>
-    <a id="download-link" class="download-link" href="" download>Last ned dette Bilde</a>
+    <a id="download-link" class="download-link" href="" download>Last ned dette bilde</a>
     <div>
       <button onclick="nextImage()">⟨ Nyere</button>
       <button onclick="prevImage()">Eldre ⟩</button>
     </div>
-  </div>
-  <div class="nav-links">
-    {% if offset > 0 %}
-    <a href="/?offset={{ offset - 1 }}">⟵ One hour newer</a>
-    {% endif %}
-    <a href="/?offset={{ offset + 1 }}">One hour older ⟶</a>
   </div>
 
   <script>
@@ -111,12 +99,12 @@ HTML_TEMPLATE = """
     }
 
     function prevImage() {
-      index = (index + 1) % images.length;
+      index = (index + 1) % images.length; // older
       updateImage();
     }
 
     function nextImage() {
-      index = (index - 1 + images.length) % images.length;
+      index = (index - 1 + images.length) % images.length; // newer
       updateImage();
     }
 
@@ -128,28 +116,16 @@ HTML_TEMPLATE = """
 
 @app.route("/")
 def index():
-    offset = int(request.args.get("offset", 0))
-
     try:
-        all_files = [
+        files = [
             f for f in os.listdir(IMAGE_FOLDER)
             if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))
         ]
-        all_files = sorted(all_files, key=get_timestamp, reverse=True)
-
-        # Filtrer basert på offset timer
-        now = datetime.now()
-        from_time = now - timedelta(hours=offset + 1)
-        to_time = now - timedelta(hours=offset)
-        filtered = [
-            f for f in all_files
-            if from_time <= get_timestamp(f) < to_time
-        ][:168]  # maks 48 bilder
-
+        files.sort(key=get_timestamp, reverse=True)
     except Exception as e:
-        filtered = []
+        files = []
 
-    return render_template_string(HTML_TEMPLATE, images=filtered, offset=offset)
+    return render_template_string(HTML_TEMPLATE, images=files)
 
 @app.route("/images/<filename>")
 def images(filename):
