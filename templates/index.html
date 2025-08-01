@@ -2,54 +2,178 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Image Carousel</title>
+<title>Bygg St.Olav</title>
 <style>
-  body { font-family: Arial, sans-serif; text-align: center; margin: 2em; }
-  img { max-width: 600px; max-height: 400px; }
-  .carousel-container { position: relative; display: inline-block; }
-  button { margin: 1em; padding: 0.5em 1em; font-size: 1em; }
-  a.download-link { display: block; margin-top: 1em; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .carousel-wrapper {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    max-width: 850px;
+  }
+  .carousel-image-container {
+    position: relative;
+    width: 600px;
+    height: 400px;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  }
+  .carousel-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 1;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .carousel-image-container img.fade-out {
+    opacity: 0;
+  }
+  .nav-button {
+    background: #007bff;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    padding: 0 12px;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 6px;
+    margin: 0 10px;
+    height: 48px;
+  }
+  .nav-button:hover {
+    background: #0056b3;
+  }
+  .info-panel {
+    margin-left: 20px;
+    max-width: 200px;
+    text-align: left;
+  }
+  .filename {
+    font-weight: 600;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    word-break: break-word;
+  }
+  .download-link {
+    background: #28a745;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    font-weight: 600;
+    transition: background 0.3s ease;
+  }
+  .download-link:hover {
+    background: #1e7e34;
+  }
 </style>
 </head>
 <body>
-  <h1>Image Carousel</h1>
-  <div class="carousel-container">
-    <img id="carousel-image" src="" alt="No images found" />
+  <div class="carousel-wrapper">
+    <button class="nav-button" id="prevBtn" aria-label="Previous Image">&#10094;</button>
+    
+    <div class="carousel-image-container">
+      <!-- Images will be layered here for fade effect -->
+    </div>
+    
+    <div class="info-panel">
+      <div class="filename" id="filename">Loading...</div>
+      <a id="downloadLink" class="download-link" href="#" download>Last ned Bilde</a>
+    </div>
+    
+    <button class="nav-button" id="nextBtn" aria-label="Next Image">&#10095;</button>
   </div>
-  <br/>
-  <button onclick="prevImage()">Prev</button>
-  <button onclick="nextImage()">Next</button>
-  <a id="download-link" class="download-link" href="" download>Download This Image</a>
 
-  <script>
-    // This array should be dynamically replaced by Flask with your image filenames.
-    let images = []; // Replace with server-rendered list e.g. ['pic1.jpg','pic2.png']
+<script>
+  // Example images array — replace with your server-rendered list
+  const images = []; // e.g. ['pic1.jpg', 'pic2.png', 'image3.jpeg']
 
-    let index = 0;
+  const container = document.querySelector('.carousel-image-container');
+  const filenameEl = document.getElementById('filename');
+  const downloadLink = document.getElementById('downloadLink');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
 
-    function updateImage() {
-      if(images.length === 0) {
-        document.getElementById('carousel-image').alt = "No images available";
-        document.getElementById('carousel-image').src = "";
-        document.getElementById('download-link').style.display = 'none';
-        return;
-      }
-      document.getElementById('carousel-image').src = '/images/' + images[index];
-      document.getElementById('download-link').href = '/images/' + images[index];
-      document.getElementById('download-link').style.display = 'inline-block';
+  let currentIndex = 0;
+  let currentImgElement = null;
+  let nextImgElement = null;
+
+  function createImage(src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.opacity = 0;
+    container.appendChild(img);
+    return img;
+  }
+
+  function showImage(index) {
+    if (images.length === 0) {
+      filenameEl.textContent = "No images found";
+      downloadLink.style.display = 'none';
+      if(currentImgElement) currentImgElement.remove();
+      return;
+    }
+    downloadLink.style.display = 'inline-block';
+
+    const src = '/images/' + images[index];
+
+    // If no image yet, create it and fade in
+    if (!currentImgElement) {
+      currentImgElement = createImage(src);
+      currentImgElement.style.opacity = 1;
+    } else {
+      // Create next image on top with opacity 0
+      nextImgElement = createImage(src);
+
+      // Start fade transition
+      setTimeout(() => {
+        nextImgElement.style.opacity = 1;
+        currentImgElement.style.opacity = 0;
+      }, 20);
+
+      // After transition remove old image and update references
+      setTimeout(() => {
+        if(currentImgElement) container.removeChild(currentImgElement);
+        currentImgElement = nextImgElement;
+        nextImgElement = null;
+      }, 520);
     }
 
-    function prevImage() {
-      index = (index - 1 + images.length) % images.length;
-      updateImage();
-    }
+    filenameEl.textContent = images[index];
+    downloadLink.href = src;
+    downloadLink.download = images[index];
+  }
 
-    function nextImage() {
-      index = (index + 1) % images.length;
-      updateImage();
-    }
+  prevBtn.addEventListener('click', () => {
+    if(images.length === 0) return;
+    currentIndex = (currentIndex - 1 + images.length) % images.length;
+    showImage(currentIndex);
+  });
 
-    updateImage();
-  </script>
+  nextBtn.addEventListener('click', () => {
+    if(images.length === 0) return;
+    currentIndex = (currentIndex + 1) % images.length;
+    showImage(currentIndex);
+  });
+
+  // Initialize
+  showImage(currentIndex);
+</script>
 </body>
 </html>
