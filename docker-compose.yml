@@ -1,0 +1,11 @@
+
+version: '3.9'
+
+services:
+  image-carousel:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - /mnt/bygg:/mnt/bygg:ro
+    restart: unless-stopped
